@@ -205,6 +205,22 @@ fn archive_signature_and_download_failures_keep_old_receipt() {
     let v2 = Fixture::new("2.0");
     success(v1.cmd(root.path(), "install"));
     let old = info(root.path());
+    // Actual downloader failure, without opening a listener or relying on DNS.
+    // Deny all network access only for this child; existing app must survive.
+    let blocked = Command::new("/usr/bin/sandbox-exec")
+        .args(["-p", "(version 1)(allow default)(deny network*)"])
+        .arg(env!("CARGO_BIN_EXE_zb"))
+        .arg("--appdir")
+        .arg(root.path())
+        .arg("--app-manifest")
+        .arg(&v2.manifest)
+        .args(["upgrade", "cask:fixture"])
+        .env_remove("ZEROBREW_ROOT")
+        .env_remove("ZEROBREW_PREFIX")
+        .output()
+        .unwrap();
+    failure(blocked);
+    assert_eq!(info(root.path()), old);
     // Missing local download input.
     fs::rename(&v2.archive, v2.root.path().join("saved.tar.xz")).unwrap();
     failure(v2.cmd(root.path(), "upgrade"));
