@@ -17,6 +17,29 @@ pub struct Cli {
 
     #[arg(
         long,
+        global = true,
+        help = "Explicit existing directory for standalone app casks (experimental; separate from formula state)"
+    )]
+    pub appdir: Option<PathBuf>,
+
+    #[arg(
+        long,
+        global = true,
+        requires = "appdir",
+        help = "Pinned raw Homebrew app-cask JSON (same validation as live metadata)"
+    )]
+    pub app_manifest: Option<PathBuf>,
+
+    #[arg(
+        long,
+        global = true,
+        requires = "app_manifest",
+        help = "Local tar.xz artifact; verified against --app-manifest"
+    )]
+    pub app_archive: Option<PathBuf>,
+
+    #[arg(
+        long,
         default_value = "20",
         value_parser = parse_concurrency,
         help = "Number of concurrent download threads"

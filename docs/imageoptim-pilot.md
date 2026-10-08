@@ -15,12 +15,12 @@ Zap metadata is information only. The pilot never removes preferences or caches.
 | Typed app metadata and fail-closed artifact validation | `zb_core::cask` tests and reduced ImageOptim API fixture | Implemented |
 | SHA, safe identifiers, OS and architecture checks | `zb_core::cask` tests | Implemented |
 | Complete bundle extraction with safe internal symlinks | Seven app I/O tests, plus real signed ImageOptim archive test | Implemented |
-| Explicit app directory and foreign-app protection | Destination-scoped AppManager tests | I/O implemented; CLI in progress |
-| Receipts, locks, repeat install, list/info/outdated | SQLite receipt, cross-process lock, fingerprint and numeric-version tests | I/O implemented; CLI in progress |
+| Explicit app directory and foreign-app protection | Destination-scoped AppManager tests and four offline CLI acceptance tests | Implemented |
+| Receipts, locks, repeat install, list/info/outdated | SQLite receipt, cross-process lock, fingerprint, numeric-version and full CLI lifecycle tests | Implemented |
 | Upgrade, uninstall and interrupted-operation recovery | Synthetic signed versions 1.0/2.0; abrupt child exit after publication for all three operations | I/O implemented |
 | Preserve old app on failures and reject external changes | SHA, real rename permission failure, DB/journal triggers, external edit during recovery, sidecar and receipt corruption | I/O implemented |
 | Fixture versions and fault-injection tests | 18 app I/O tests pass; one ignored worker is invoked by its parent test | Implemented |
-| Signed real artifact and functional smoke test | Real archive passes the Rust staging path and signature verification. Repeat functional test through final CLI. | Partial |
+| Signed real artifact and functional smoke test | Final CLI download/install/repeat/info/outdated/uninstall; sandboxed ImageOptim: 6,174 → 84 bytes with exact decoded RGBA equality | Verified |
 | Pinned opt-in Nix integration and takeover/return procedure | Pending | Open |
 
 ## Initial verification, 2026-10-09
@@ -92,6 +92,43 @@ for install, upgrade and removal. This is process-exit evidence, not a power-los
 Parallel tests exposed a short inherited-lock window around subprocess creation.
 An explicit lock guard now releases the lock after the SQLite connection closes.
 The full focused suite and I/O Clippy pass after that change.
+
+## CLI and final real-artifact evidence
+
+App mode is explicit: pass `--appdir` with an existing absolute destination.
+Only `cask:<token>` names are accepted. Install, upgrade and uninstall operate on
+exactly one app per transaction. Formula roots/prefixes, reset, migration, source
+builds and `--no-link` are rejected in app mode.
+
+Optional `--app-manifest` selects raw, pinned Homebrew JSON instead of the live API.
+Optional `--app-archive` supplies a local artifact and requires a manifest.
+Both paths use the same metadata, checksum, archive and signature validation.
+This supports offline tests and a reproducible Nix activation without live metadata drift.
+Without these options the CLI uses the Homebrew Cask API and the existing checksum-verifying downloader.
+
+Four network-free CLI tests cover the complete two-version lifecycle, invalid actions
+before state creation, missing/corrupt archives, invalid signatures, foreign bundles
+and externally changed apps. All 64 CLI unit tests pass.
+The workspace suite passes: 56 core, 64 CLI, four app CLI and 348 I/O tests.
+The ignored subprocess worker is executed explicitly by its parent lifecycle test.
+Network/parity integration tests remain opt-in.
+
+The workspace run used Apple tools first in PATH and `RUBYOPT=--disable-gems`.
+The original environment loaded a stale native JSON gem linked to a removed Ruby.
+A separate test-only commit inspects each Mach-O architecture explicitly, because
+this host's otool prints only the host slice by default. Both slices are still required.
+No formula runtime behavior changed.
+
+The reproducible smoke runner is:
+`/Users/patwoz/dev/Personal/thirdparty/zerobrew/scripts/imageoptim-smoke.py`.
+It downloads the pinned archive through zb, verifies the vendor team, repeats the
+install, runs ImageOptim on a generated test-image copy inside a write/network sandbox,
+compares decoded RGBA pixels with ImageMagick, rechecks the receipt and uninstalls.
+It fingerprints the real `/Applications/ImageOptim.app` before and after, without
+launching or modifying it. The source image, vendor bundle and production bundle
+remained unchanged. ImageOptim returned zero and reduced 6,174 bytes to 84 bytes;
+the 47 × 43 image's decoded pixels match exactly.
+Evidence from the successful run is `/private/tmp/zerobrew-final-appvze6n/report.json`.
 
 ## Implementation order
 

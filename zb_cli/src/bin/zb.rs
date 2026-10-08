@@ -28,6 +28,22 @@ async fn run(cli: Cli) -> Result<(), zb_core::Error> {
         return commands::completion::execute(shell);
     }
 
+    if let Some(appdir) = cli.appdir.as_ref() {
+        if cli.root.is_some() || cli.prefix.is_some() {
+            return Err(zb_core::Error::InvalidArgument {
+                message: "--appdir cannot be combined with --root or --prefix".into(),
+            });
+        }
+        return commands::apps::execute(
+            appdir,
+            cli.command,
+            cli.app_manifest.as_deref(),
+            cli.app_archive.as_deref(),
+            cli.quiet,
+        )
+        .await;
+    }
+
     let root = get_root_path(cli.root);
     let prefix = get_prefix_path(cli.prefix, &root);
 
