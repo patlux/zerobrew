@@ -15,11 +15,11 @@ Zap metadata is information only. The pilot never removes preferences or caches.
 | Typed app metadata and fail-closed artifact validation | `zb_core::cask` tests and reduced ImageOptim API fixture | Implemented |
 | SHA, safe identifiers, OS and architecture checks | `zb_core::cask` tests | Implemented |
 | Complete bundle extraction with safe internal symlinks | Seven app I/O tests, plus real signed ImageOptim archive test | Implemented |
-| Explicit app directory and foreign-app protection | Pending | Open |
-| Receipts, locks, repeat install, list/info/outdated | Pending | Open |
-| Upgrade, uninstall and interrupted-operation recovery | Pending | Open |
-| Preserve old app on failures and reject external changes | Pending | Open |
-| Fixture versions and fault-injection tests | Pending | Open |
+| Explicit app directory and foreign-app protection | Destination-scoped AppManager tests | I/O implemented; CLI in progress |
+| Receipts, locks, repeat install, list/info/outdated | SQLite receipt, cross-process lock, fingerprint and numeric-version tests | I/O implemented; CLI in progress |
+| Upgrade, uninstall and interrupted-operation recovery | Synthetic signed versions 1.0/2.0; abrupt child exit after publication for all three operations | I/O implemented |
+| Preserve old app on failures and reject external changes | SHA, real rename permission failure, DB/journal triggers, external edit during recovery, sidecar and receipt corruption | I/O implemented |
+| Fixture versions and fault-injection tests | 18 app I/O tests pass; one ignored worker is invoked by its parent test | Implemented |
 | Signed real artifact and functional smoke test | Real archive passes the Rust staging path and signature verification. Repeat functional test through final CLI. | Partial |
 | Pinned opt-in Nix integration and takeover/return procedure | Pending | Open |
 
@@ -67,6 +67,31 @@ Seven focused I/O tests pass. A signed synthetic bundle passes inspection, then 
 The explicit real-artifact test passes through the new Rust staging path.
 It preserves the vendor signature, team identity, version, and framework symlinks.
 I/O Clippy passes with warnings denied.
+
+## Ownership and recovery verification
+
+App state lives inside the explicit app destination, in a private `.zerobrew-apps` directory.
+A destination-scoped lock prevents separate zerobrew roots from taking independent ownership.
+The receipt stores cask metadata, bundle identity, version and a content/type/mode fingerprint.
+Repeated installation verifies the fingerprint before it becomes a no-op.
+Outdated checks reject same-version substitutions and upstream downgrades.
+Upgrades require an explicit request and comparable numeric versions.
+
+macOS exclusive rename and atomic exchange publish the bundle.
+SQLite journals the pending operation before publication and commits the receipt afterward.
+Staging and parent directories are synced. SQLite uses FULL synchronization and fullfsync.
+An interrupted, uncommitted operation restores the prior app on next open.
+Recovery stops without deleting either copy if an external program changed a transaction path.
+User preferences and zap paths are never used by removal.
+
+The lifecycle tests cover installation, repetition, upgrade, outdated, removal, foreign apps,
+external edits, malformed receipts, symlinked state and SQLite sidecars, actual filesystem
+rename failure, receipt/journal errors, recovery failure and cross-process contention.
+A child test exits directly after publication without destructors; the parent verifies recovery
+for install, upgrade and removal. This is process-exit evidence, not a power-loss simulation.
+Parallel tests exposed a short inherited-lock window around subprocess creation.
+An explicit lock guard now releases the lock after the SQLite connection closes.
+The full focused suite and I/O Clippy pass after that change.
 
 ## Implementation order
 
