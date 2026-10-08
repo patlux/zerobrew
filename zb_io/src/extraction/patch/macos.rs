@@ -1132,13 +1132,18 @@ echo "Hello from $PREFIX"
 
         relocate_keg(&keg, &cellar, "x", "1.0", "/opt/homebrew").unwrap();
 
-        let ids = otool(&["-D"], &dylib);
         let want = format!("{}/opt/x/lib/libx.dylib", prefix.display());
-        assert_eq!(
-            ids.matches(&want).count(),
-            2,
-            "both slices must carry the new install name:\n{ids}"
-        );
+        // Recent otool versions default to the host slice, even for a fat
+        // binary. Inspect each architecture explicitly rather than counting
+        // duplicate install names in the default output.
+        for arch in ["arm64", "x86_64"] {
+            let ids = otool(&["-arch", arch, "-D"], &dylib);
+            assert_eq!(
+                ids.matches(&want).count(),
+                1,
+                "{arch} slice must carry the new install name:\n{ids}"
+            );
+        }
         assert!(signature_is_valid(&dylib));
     }
 
