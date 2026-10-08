@@ -1,3 +1,4 @@
+pub mod app_cask;
 pub mod build;
 pub mod cellar;
 pub(crate) mod checksum;

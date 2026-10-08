@@ -14,13 +14,13 @@ Zap metadata is information only. The pilot never removes preferences or caches.
 | --- | --- | --- |
 | Typed app metadata and fail-closed artifact validation | `zb_core::cask` tests and reduced ImageOptim API fixture | Implemented |
 | SHA, safe identifiers, OS and architecture checks | `zb_core::cask` tests | Implemented |
-| Complete bundle extraction with safe internal symlinks | Pending | Open |
+| Complete bundle extraction with safe internal symlinks | Seven app I/O tests, plus real signed ImageOptim archive test | Implemented |
 | Explicit app directory and foreign-app protection | Pending | Open |
 | Receipts, locks, repeat install, list/info/outdated | Pending | Open |
 | Upgrade, uninstall and interrupted-operation recovery | Pending | Open |
 | Preserve old app on failures and reject external changes | Pending | Open |
 | Fixture versions and fault-injection tests | Pending | Open |
-| Signed real artifact and functional smoke test | Pre-implementation gate below. Repeat through final installer. | Partial |
+| Signed real artifact and functional smoke test | Real archive passes the Rust staging path and signature verification. Repeat functional test through final CLI. | Partial |
 | Pinned opt-in Nix integration and takeover/return procedure | Pending | Open |
 
 ## Initial verification, 2026-10-09
@@ -52,6 +52,21 @@ An earlier zero-exit run did not optimize the image because the sandbox denied w
 
 The real Homebrew app, preferences and configuration remain unchanged.
 Production takeover requires a separate explicit deployment instruction.
+
+## Archive and bundle verification
+
+The app staging path verifies SHA-256 before extraction.
+It checks all members before it creates a private staging directory.
+It rejects traversal, duplicate and case-colliding names, special files, hard links, and entries below symlinks.
+It permits internal framework symlinks and checks their complete resolved chains.
+A content/type/mode fingerprint detects external changes.
+The macOS inspector verifies the existing signature and reads bundle metadata with plutil.
+It never re-signs a downloaded app.
+
+Seven focused I/O tests pass. A signed synthetic bundle passes inspection, then fails after executable tampering.
+The explicit real-artifact test passes through the new Rust staging path.
+It preserves the vendor signature, team identity, version, and framework symlinks.
+I/O Clippy passes with warnings denied.
 
 ## Implementation order
 
