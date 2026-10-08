@@ -221,12 +221,29 @@ impl AppManager {
 
     pub fn verify(&self, receipt: &AppReceipt) -> Result<(), Error> {
         validate_receipt(receipt)?;
+        self.check_homebrew_owner(&receipt.cask.token)?;
         let path = self.appdir.join(&receipt.cask.app.name);
         if fingerprint(&path)? != receipt.bundle.fingerprint {
             return Err(invalid(format!(
                 "app '{}' changed outside zerobrew; leaving it untouched",
                 receipt.cask.token
             )));
+        }
+        Ok(())
+    }
+
+    fn check_homebrew_owner(&self, token: &str) -> Result<(), Error> {
+        // Standard macOS Homebrew receipts are authoritative even if somebody
+        // manually removed its application. Isolated pilot directories do not
+        // take ownership of the production app and remain usable for testing.
+        if self.appdir == Path::new("/Applications") {
+            reject_caskroom_owner(
+                token,
+                &[
+                    Path::new("/opt/homebrew/Caskroom"),
+                    Path::new("/usr/local/Caskroom"),
+                ],
+            )?;
         }
         Ok(())
     }
@@ -264,6 +281,7 @@ impl AppManager {
     /// same-version artifact substitutions fail closed.
     pub fn needs_install(&self, cask: &AppCask, upgrade: bool) -> Result<bool, Error> {
         validate_names(cask)?;
+        self.check_homebrew_owner(&cask.token)?;
         if let Some(old) = self.get(&cask.token)? {
             self.verify(&old)?;
             if old.cask.app.name != cask.app.name {
@@ -479,6 +497,7 @@ impl AppManager {
         if self.get(&pending.receipt()?.cask.token)? != pending.old {
             return Err(invalid("app journal does not match the committed receipt"));
         }
+        self.check_homebrew_owner(&pending.receipt()?.cask.token)?;
         let (target, staged) = self.paths(&pending)?;
         let current = optional_fingerprint(&target)?;
         let staged_hash = optional_fingerprint(&staged)?;
@@ -533,6 +552,24 @@ impl AppManager {
     }
 }
 
+fn reject_caskroom_owner(token: &str, roots: &[&Path]) -> Result<(), Error> {
+    for root in roots {
+        match fs::symlink_metadata(root.join(token)) {
+            Ok(_) => {
+                return Err(invalid(
+                    "Homebrew still owns this cask; complete the backed-up handoff before installing into /Applications",
+                ));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(error) => {
+                return Err(invalid(format!(
+                    "cannot inspect Homebrew ownership: {error}"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
 fn safe_component(value: &str) -> bool {
     !value.is_empty()
         && value != "."

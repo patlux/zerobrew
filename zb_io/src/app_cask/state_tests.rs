@@ -411,6 +411,17 @@ fn abrupt_exit_and_cross_process_lock() {
 }
 
 #[test]
+fn homebrew_receipt_blocks_takeover_even_without_an_app() {
+    let root = tempfile::tempdir().unwrap();
+    assert!(reject_caskroom_owner("fixture", &[root.path()]).is_ok());
+    fs::create_dir(root.path().join("fixture")).unwrap();
+    assert!(reject_caskroom_owner("fixture", &[root.path()]).is_err());
+    fs::remove_dir(root.path().join("fixture")).unwrap();
+    std::os::unix::fs::symlink("missing", root.path().join("fixture")).unwrap();
+    assert!(reject_caskroom_owner("fixture", &[root.path()]).is_err());
+}
+
+#[test]
 fn numeric_versions_never_guess_a_downgrade() {
     assert!(newer_version("1.10", "1.9").unwrap());
     assert!(!newer_version("1.0.0", "1").unwrap());
