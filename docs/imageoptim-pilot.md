@@ -19,7 +19,7 @@ Zap metadata is information only. The pilot never removes preferences or caches.
 | Receipts, locks, repeat install, list/info/outdated | SQLite receipt, cross-process lock, fingerprint, numeric-version and full CLI lifecycle tests | Implemented |
 | Upgrade, uninstall and interrupted-operation recovery | Synthetic signed versions 1.0/2.0; abrupt child exit after publication for all three operations | I/O implemented |
 | Preserve old app on failures and reject external changes | SHA, real rename permission failure, DB/journal triggers, external edit during recovery, sidecar and receipt corruption | I/O implemented |
-| Fixture versions and fault-injection tests | 18 app I/O tests pass; one ignored worker is invoked by its parent test | Implemented |
+| Fixture versions and fault-injection tests | 19 app I/O tests pass; one ignored worker is invoked by its parent test | Implemented |
 | Signed real artifact and functional smoke test | Final CLI download/install/repeat/info/outdated/uninstall; sandboxed ImageOptim: 6,174 → 84 bytes with exact decoded RGBA equality | Verified |
 | Pinned opt-in Nix integration and takeover/return procedure | Pending | Open |
 
@@ -109,7 +109,7 @@ Without these options the CLI uses the Homebrew Cask API and the existing checks
 Four network-free CLI tests cover the complete two-version lifecycle, invalid actions
 before state creation, missing/corrupt archives, invalid signatures, foreign bundles
 and externally changed apps. All 64 CLI unit tests pass.
-The workspace suite passes: 56 core, 64 CLI, four app CLI and 348 I/O tests.
+The workspace suite passes: 56 core, 64 CLI, four app CLI and 349 I/O tests.
 The ignored subprocess worker is executed explicitly by its parent lifecycle test.
 Network/parity integration tests remain opt-in.
 
@@ -128,7 +128,18 @@ It fingerprints the real `/Applications/ImageOptim.app` before and after, withou
 launching or modifying it. The source image, vendor bundle and production bundle
 remained unchanged. ImageOptim returned zero and reduced 6,174 bytes to 84 bytes;
 the 47 × 43 image's decoded pixels match exactly.
-Evidence from the successful run is `/private/tmp/zerobrew-final-appvze6n/report.json`.
+Evidence from the successful download run is `/private/tmp/zerobrew-final-appvze6n/report.json`.
+The final ownership-guard build also passed using the local archive:
+`/private/tmp/zerobrew-final-qqipbipn/report.json`.
+A separate live Homebrew API install/outdated/uninstall passed in
+`/private/tmp/zerobrew-live-mj3ic0rk`.
+The CLI failure test now also exercises the actual downloader with network access
+denied by a child-only sandbox. It preserves the prior app and receipt.
+
+For `/Applications`, AppManager checks both standard Homebrew Caskroom locations.
+A retained receipt blocks install, verification, removal and recovery, even if the
+Homebrew app was manually removed. A fixture tests real and dangling receipt paths.
+Isolated app directories remain available without taking ownership of the real app.
 
 ## Implementation order
 
