@@ -1,4 +1,5 @@
 pub mod build;
+pub mod cask;
 pub mod context;
 pub mod errors;
 pub mod formula;

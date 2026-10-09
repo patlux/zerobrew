@@ -1,0 +1,12 @@
+{
+  "token": "imageoptim",
+  "version": "1.9.3",
+  "url": "https://imageoptim.com/ImageOptim1.9.3.tar.xz",
+  "sha256": "d4e453bbb55b6491d519a30e0e6de5beb7ce1a929e8f835767b638ef6ffd371d",
+  "auto_updates": true,
+  "depends_on": { "macos": {} },
+  "artifacts": [
+    { "app": ["ImageOptim.app"], "target": "/Applications/ImageOptim.app" },
+    { "zap": [{ "trash": ["~/Library/Preferences/net.pornel.ImageOptim.plist"] }] }
+  ]
+}
