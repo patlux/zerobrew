@@ -21,7 +21,7 @@ Zap metadata is information only. The pilot never removes preferences or caches.
 | Preserve old app on failures and reject external changes | SHA, real rename permission failure, DB/journal triggers, external edit during recovery, sidecar and receipt corruption | I/O implemented |
 | Fixture versions and fault-injection tests | 19 app I/O tests pass; one ignored worker is invoked by its parent test | Implemented |
 | Signed real artifact and functional smoke test | Final CLI download/install/repeat/info/outdated/uninstall; sandboxed ImageOptim: 6,174 → 84 bytes with exact decoded RGBA equality | Verified |
-| Pinned opt-in Nix integration and takeover/return procedure | Pending | Open |
+| Pinned opt-in Nix integration and takeover/return procedure | Immutable runtime commit; disabled mbpromax module; package/activation builds; enabled/disabled evaluations; Nix-binary smoke and isolated app/Caskroom backup restore | Prepared and verified; production handoff not executed |
 
 ## Initial verification, 2026-10-09
 
@@ -140,6 +140,29 @@ For `/Applications`, AppManager checks both standard Homebrew Caskroom locations
 A retained receipt blocks install, verification, removal and recovery, even if the
 Homebrew app was manually removed. A fixture tests real and dangling receipt paths.
 Isolated app directories remain available without taking ownership of the real app.
+
+## Nix pilot completion
+
+The Nix package pins runtime commit `de8a4e35e8c8cfda0d8b29754a86b726af7e13a8`.
+It builds successfully with Rust 1.98.1 and passes 56 pure core tests in the sandbox.
+The opt-in module is disabled in the persistent mbpromax configuration.
+Homebrew still owns ImageOptim 1.9.3. No production activation occurred.
+Both enabled and disabled host configurations were evaluated, and the enabled
+activation script plus pinned vendor archive were built without executing them.
+Seven targeted Nix assertions and the final complete `make nix-check` pass.
+
+The Nix binary and Nix-fetched archive passed the same isolated functional test:
+`/private/tmp/zerobrew-final-bjyfm7mh/report.json`.
+App/Caskroom backup and restoration into a second disposable directory preserve
+file contents, modes and symlink targets; the restored app signature is valid:
+`/private/tmp/zerobrew-rollback-xl888e6k/report.json`.
+This is a verified data restore, not a production Homebrew ownership round-trip.
+
+The exact, separately authorized takeover and rollback steps are documented in
+`/Users/patwoz/dev/Personal/infra/nix/docs/private/zerobrew-imageoptim-pilot.md`.
+The later apply command on mbpromax is
+`make -C /Users/patwoz/dev/Personal/infra switch`, after the backed-up handoff.
+A production first/second switch and its target-app smoke remain intentionally pending.
 
 ## Implementation order
 
